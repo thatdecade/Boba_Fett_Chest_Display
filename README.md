@@ -1,5 +1,5 @@
 # Boba-Fett-Chest-Display
-This is the software for the display on Boba Fett’s chest plate.
+This is the software for the display on Boba Fett’s chest plate.  It was developed in collaboration with Joshua Kane.
 
 Video Demo: https://www.flickr.com/photos/dwest2/23788341410
 
