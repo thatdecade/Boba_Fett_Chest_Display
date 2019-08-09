@@ -8,7 +8,7 @@ Video Demo: https://www.flickr.com/photos/dwest2/23788341410
 
 Part List: http://www.mouser.com/ProjectManager/ProjectDetail.aspx?AccessID=7c6a316116
 
-PCB Main Board: https://www.oshpark.com/shared_projects/ml5VjhuM
+PCB Main Board: https://oshpark.com/shared_projects/f60TBgnX
 
 PCB Bargraph Board: https://www.oshpark.com/shared_projects/E4qjCF4r
 
