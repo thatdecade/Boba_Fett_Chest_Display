@@ -3,7 +3,7 @@
   This is the software for the display on Boba Fett’s chest plate.
   Arduino IDE.
 
-  Last Modified: Dec 18, 2020
+  Last Modified: Jan 3, 2021
 
   Authors: Joshua Kane, Dustin Westaby
 
@@ -22,7 +22,6 @@
   Usage: 
    - Some example sequences are given below. Comment / Uncomment the sequence you want to use.
    - For a customized sequence, use the sequence_builder.xlsx
-   - To synch the bargraph and character animations, use the same divider and the same number of sequence steps.
 */
 
  /* =========================
@@ -31,12 +30,15 @@
 
 /* START: Mandalorian Animation */
 
+#define ASYNC_BARGRAPH
+
+//lower = faster
+//higher = slower
+#define BASE_SPEED 3
+#define BAR_SPEED 15 //at base = 3, allowed values: 5, 10, 15, 16, 33
+
 #define BAR_SEQ_SIZE 8
 #define CHAR_SEQUENCE_SIZE 10
-
-//higher = slower
-#define CHAR_ANIMATION_SPEED_DIVIDER 9  // Sets divider, NUM_LOOPS_PER_WORD / 2^X
-#define BAR_ANIMATION_SPEED_DIVIDER  7  // Sets divider, NUM_LOOPS_PER_WORD / 2^X
 
 const byte char_sequence[10][5] =
 {
@@ -69,12 +71,16 @@ const byte bar_sequence[8] =
 /* // END: Mandalorian Animation */
 
 /* START: ESB Animation 
- 
-//higher = slower (max = 10)
-#define CHAR_ANIMATION_SPEED_DIVIDER  10
-#define BAR_ANIMATION_SPEED_DIVIDER   10
 
-const byte char_sequence[11][5] =
+#define SYNC_BARGRAPH
+
+//lower = faster
+//higher = slower
+#define BASE_SPEED 3
+
+#define CHAR_SEQUENCE_SIZE 11
+
+const byte char_sequence[CHAR_SEQUENCE_SIZE][5] =
 {
     //  DIGIT 1     DIGIT 2     DIGIT 3     DIGIT 4     DIGIT 5  
     //  GFEDCBA     GFEDCBA     GFEDCBA     GFEDCBA     GFEDCBA         
@@ -91,7 +97,7 @@ const byte char_sequence[11][5] =
     {0b10001001, 0b11000010, 0b10100100, 0b10000000, 0b11001110},  //H{E8¬ // 10
 };
 
-const byte bar_sequence[11] =
+const byte bar_sequence[CHAR_SEQUENCE_SIZE] =
 {           //  BARGRAPH
             //   12345
     0xFF, //  0 |     |
@@ -109,13 +115,17 @@ const byte bar_sequence[11] =
 // END: ESB Animation */
 
 
-/* START: ROTJ Animation 
- 
-//higher = slower
-#define CHAR_ANIMATION_SPEED_DIVIDER  10
-#define BAR_ANIMATION_SPEED_DIVIDER   10
+/* // START: ROTJ Animation 
 
-const byte char_sequence[8][5] =
+#define SYNC_BARGRAPH
+
+//lower = faster
+//higher = slower
+#define BASE_SPEED 3
+
+#define CHAR_SEQUENCE_SIZE 8
+
+const byte char_sequence[CHAR_SEQUENCE_SIZE][5] =
 {
     //  DIGIT 1     DIGIT 2     DIGIT 3     DIGIT 4     DIGIT 5  
     //  GFEDCBA     GFEDCBA     GFEDCBA     GFEDCBA     GFEDCBA         
@@ -129,7 +139,7 @@ const byte char_sequence[8][5] =
     {0b10001001, 0b11000010, 0b10100100, 0b10000000, 0b11001110},  //HG28r // 7
 };
 
-const byte bar_sequence[8] =
+const byte bar_sequence[CHAR_SEQUENCE_SIZE] =
 {           //  BARGRAPH
             //   12345
     0x03, //  0 |   = |
@@ -148,30 +158,14 @@ const byte bar_sequence[8] =
 /* DO NOT EDIT BELOW THIS LINE */
 /* *************************************************** */
 
-// This section contains speed calculations
-
-#define ANIMATION_SPEED_MULTIPLIER 100  // Sets multiplier, CHAR_SEQUENCE_SIZE * BAR_SEQ_SIZE * X
-
-//NUM_LOOPS_PER_WORD needs to be divisible by bar_sequence and char_sequence's size
-#define NUM_LOOPS_PER_WORD (CHAR_SEQUENCE_SIZE*BAR_SEQ_SIZE*CHAR_ANIMATION_SPEED_DIVIDER*ANIMATION_SPEED_MULTIPLIER) 
-
-/* ********** Example speed calc **********
-     speed multipler = 100
-     char speed divider = 9   //2^9 = 512
-     bar speed divider  = 6   //2^6 = 64
-     
-     NUM_LOOPS_PER_WORD = (CHAR_SEQUENCE_SIZE*BAR_SEQ_SIZE*ANIMATION_SPEED_MULTIPLIER*CHAR_ANIMATION_SPEED_DIVIDER*BAR_ANIMATION_SPEED_DIVIDER) = (10*8*9*100) = 72000
-     
-     for ( NUM_LOOPS_PER_WORD )
-        charIdx = (i >> CHAR_ANIMATION_SPEED_DIVIDER) % CHAR_SEQ_SIZE = (i / 64) % 10
-        barIdx  = (i >> BAR_ANIMATION_SPEED_DIVIDER)  % BAR_SEQ_SIZE  = (i / 64) % 8
-
-     // Every 512th, the character will update, sending an index of 0-9 to word_test
-     // Every 64th loop, the bar will update, sending an index of 0-7 to bar_test
-     
-********** ********** ********** ********** */
-
 // This section contains board specific information
+
+//approx 2400 for 2 seconds of delay, must be divisible by the BAR_SEQ_SIZE * BAR_ANIMATION_SPEED_DIVIDER
+#define NUM_LOOPS_PER_WORD (BASE_SPEED*100*8)
+
+#ifdef ASYNC_BARGRAPH
+#define BAR_ANIMATION_SPEED_DIVIDER  (BAR_SPEED*10)
+#endif
 
 #define NUM_BARS       5
 #define NUM_DIGITS     5
@@ -238,22 +232,28 @@ void setup()
   }
 }
 
+
+
 // Walks through the entire sentence, word by word, repeating each word
 //   multiple times so that they mind perceives a roughly two second delay
 //   between each new word before the loop starts again.
 void loop()
 {
-  uint16_t charIdx = 0;
-  uint16_t barIdx = 0;
-
-  // Repeat each word to meet the desired update frequency (300 = ~2 seconds)
-  for ( uint32_t idxDelay = 0; idxDelay < NUM_LOOPS_PER_WORD; idxDelay++)
+  // Move through the words in the sentence one at a time
+  for ( int idxWord = 0; idxWord < CHAR_SEQUENCE_SIZE; idxWord++)
   {
-    barIdx  = (idxDelay>>BAR_ANIMATION_SPEED_DIVIDER)  % BAR_SEQ_SIZE;
-    charIdx = (idxDelay>>CHAR_ANIMATION_SPEED_DIVIDER) % CHAR_SEQUENCE_SIZE;
-    
-    bar_test ( barIdx  );
-    word_test( charIdx ) ;
+    // Repeat each word until we've hit roughly 2 seconds per word
+    for ( int idxDelay = 0; idxDelay < NUM_LOOPS_PER_WORD; idxDelay++)
+    {
+      word_test( idxWord ) ;
+#ifdef ASYNC_BARGRAPH
+      bar_test ( (idxDelay/BAR_ANIMATION_SPEED_DIVIDER) % BAR_SEQ_SIZE );
+#endif
+    }
+#ifdef SYNC_BARGRAPH
+    bar_test ( idxWord );
+#endif
+
   }
 }
 
