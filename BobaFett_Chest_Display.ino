@@ -7,8 +7,9 @@
 
   Authors: Joshua Kane, Dustin Westaby
 
-  Video Demo:
+  Video Demos:
   https://www.flickr.com/photos/dwest2/23788341410
+  https://youtu.be/mR4YBt7tsDA
 
   Part List:
   http://www.mouser.com/ProjectManager/ProjectDetail.aspx?AccessID=7c6a316116
