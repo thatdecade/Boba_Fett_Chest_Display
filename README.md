@@ -14,12 +14,10 @@ PCB Bargraph Board: https://www.oshpark.com/shared_projects/E4qjCF4r
 
 PCB Assembly Guide: http://www.westaby.net/2016/01/guide-boba-fett-chest-display/
 
-For a customized sequence:
-- Download the Board Sequence Builder from fettronics.com
-- Edit the sequence builder's .ini file with the following:
-   segmentorder=-gfedcba
-   toporder=---12345
-- Open the Board Sequence Builder application and create your new sequence.
-- When finished, save, close, and reopen the .ini file.  Find your sequence on the list.
-- Copy and paste the hex numbers in to the appropriate code locations
-- Update SEQUENCE_SIZE with the number of lines in your animation sequence
+Animation sequences for ESB, RTOJ, and Mandalorian are included.  For a customized sequence:
+- Open the sequence_builder.xlsx
+- There are three tabs, Seq Builder, Encoder, and Decoder.
+- On the Seq Builder tab, enter 1s and 0s to light up the characters as you wish.
+- Copy the indicated cell and paste the values to the sequence rows (right click, paste values)
+- When finished, copy the finished sequence into the arduino code.
+- Update CHAR_SEQUENCE_SIZE with the number of lines in your animation sequence
