@@ -3,7 +3,7 @@
   This is the software for the display on Boba Fett’s chest plate.
   Arduino IDE.
 
-  Last Modified: Jan 3, 2021
+  Last Modified: Jan 27, 2021
 
   Authors: Joshua Kane, Dustin Westaby
 
@@ -21,15 +21,31 @@
   https://www.oshpark.com/shared_projects/E4qjCF4r
 
   Usage: 
-   - Some example sequences are given below. Comment / Uncomment the sequence you want to use.
+   - Some example sequences are given below. Comment / Uncomment the options you want to use.
    - For a customized sequence, use the sequence_builder.xlsx
 */
+
+ /* =========================
+      Options
+   ========================= */
+
+//#define USE_MANDO_ANIMATION
+#define USE_ESB_ANIMATION
+//#define USE_ROTJ_ANIMATION
+
+#define USING_COMMON_ANODE_7SEG_DISPLAYS
+//#define USING_COMMON_CATHODE_7SEG_DISPLAYS //Note: Common cathode also needs special wiring, email thatdecade@gmail.com
+
+ /* =========================
+      Animations
+   ========================= */
 
  /* =========================
       Structure Constants
    ========================= */
 
-/* START: Mandalorian Animation */
+#ifdef USE_MANDO_ANIMATION
+// START: Mandalorian Animation
 
 #define ASYNC_BARGRAPH
 
@@ -69,9 +85,12 @@ const byte bar_sequence[8] =
     0x02, //  6 |  =  |
     0x01, //  7 |   = |
 };
-/* // END: Mandalorian Animation */
 
-/* START: ESB Animation 
+// END: Mandalorian Animation
+#endif
+
+// START: ESB Animation
+#ifdef USE_ESB_ANIMATION
 
 #define SYNC_BARGRAPH
 
@@ -113,10 +132,12 @@ const byte bar_sequence[CHAR_SEQUENCE_SIZE] =
     0x01, //  9 | =   |
     0xFF, // 10 |     |
 };
-// END: ESB Animation */
 
+// END: ESB Animation
+#endif
 
-/* // START: ROTJ Animation 
+#ifdef USE_ROTJ_ANIMATION
+// START: ROTJ Animation
 
 #define SYNC_BARGRAPH
 
@@ -152,7 +173,9 @@ const byte bar_sequence[CHAR_SEQUENCE_SIZE] =
     0x04, //  6 |    =|
     0xFF, //  7 |     |
 };
-// END: ROTJ Animation */
+
+// END: ROTJ Animation
+#endif
 
 
 /* *************************************************** */
@@ -172,8 +195,21 @@ const byte bar_sequence[CHAR_SEQUENCE_SIZE] =
 #define NUM_DIGITS     5
 #define NUM_SEGMENTS   7
 
+#if defined(USING_COMMON_ANODE_7SEG_DISPLAYS)
+
 #define BAR_ON      LOW
 #define BAR_OFF     HIGH
+#define CHAR_ON      HIGH
+#define CHAR_OFF     LOW
+
+#else //USING_COMMON_CATHODE_7SEG_DISPLAYS
+
+#define BAR_ON      HIGH
+#define BAR_OFF     LOW
+#define CHAR_ON      LOW
+#define CHAR_OFF     HIGH
+
+#endif
 
 const byte pinmap_bars[NUM_BARS] =
 {
@@ -272,13 +308,10 @@ void word_test(int idxWord )
     for( int segment = 0 ; segment < NUM_SEGMENTS; segment++ )
       digitalWrite( pinmap_segments[segment], ( charValue >> segment ) & 1 ) ;
 
-    // Turn the character on
-    digitalWrite( pinmap_digits[character],   HIGH);
-
+    // Blink Character
+    digitalWrite( pinmap_digits[character],CHAR_ON);
     delay(0);
-
-    // Turn the character off
-    digitalWrite( pinmap_digits[character],   LOW);
+    digitalWrite( pinmap_digits[character],CHAR_OFF);
   }
 
 }
