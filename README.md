@@ -8,7 +8,7 @@ Video Demo: https://www.flickr.com/photos/dwest2/23788341410
 
 Video Build Guide: https://youtu.be/qv9qykpNFjM
 
-Part List: http://www.mouser.com/ProjectManager/ProjectDetail.aspx?AccessID=7c6a316116
+Part List: https://www.mouser.com/ProjectManager/ProjectDetail.aspx?AccessID=554d07ab05
 
 PCB Main Board: https://oshpark.com/shared_projects/f60TBgnX
 
