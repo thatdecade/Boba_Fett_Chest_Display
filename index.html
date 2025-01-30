@@ -1,0 +1,948 @@
+<!-- 
+    7-Segment LED Display Animator Tool - 5-Digit with Color Toggle
+    
+    Authors: 
+        Jason A. Cox (@jasonacox) - https://github.com/jasonacox
+        Dustin Westaby (@thatdecade) - http://westaby.net
+
+    Description:
+        This tool allows the user to visually toggle on/off each segment in a multiplexed 
+        7-segment display to create custom animation patterns.
+
+        Users can SAVE each configuration as a "frame" to build an animation sequence, 
+        shown in the "Animation Data" section. They can then PLAY back the frames on the 
+        display. Once finished, the code can be COPIED to the clipboard for easy inclusion 
+        in Arduino sketches.
+
+        DUSTIN WESTABY CONTRIBUTIONS:
+        * Extended to a 5-Digit Version
+        * Local Storage Persistence (restore animation on page refresh)
+        * Built-in Example Animations
+        * Selectable Display Color
+        * Selectable CA or CC Formatting (draft)
+
+        Designed for use with the Arduino TM1637TinyDisplay library:
+            https://github.com/jasonacox/TM1637TinyDisplay
+
+    Date: January 30, 2025
+-->
+
+<html>
+<head>
+<style>
+div {
+    font:14px Arial, Serif;
+}
+#digitPane {
+    background-color: black;
+    width: 750px;
+    text-align: center;
+    border:1px solid #4e4e4e;
+}
+.off {
+    fill: var(--offColor, #001432); /* Default to BLUE off */
+}
+.on {
+    fill: var(--onColor, #0000ff);   /* Default to BLUE on */
+}
+#readings {
+    display: inline-block; 
+    width: 120px; 
+    margin-left: 20px;
+    font:14px Arial, Serif;
+    text-align: center;
+    margin-top: 5px;
+    margin-bottom: 5px;
+}
+#valuePane {
+    width: 750px;
+    margin-left: 0px;
+    background-color: #d3d3d3;
+    border:1px solid #4e4e4e;
+}
+#codeOutput {
+    /* height:100px; */
+    width:738px;
+    margin-top: 5px;
+    margin-left: 5px;
+    margin-bottom: 5px;
+    border:1px solid #4e4e4e;
+    font:15px Arial, Serif;
+    /* overflow:auto; uncomment to turn on scrolling */
+    background-color: white;
+}
+#controls {
+    display: inline-block; 
+    width: 750px; 
+    text-align: center;
+    margin-top: 5px;
+    margin-bottom: 5px;
+}
+#controls2 {
+    display: inline-block; 
+    width: 750px; 
+    margin-left: 20px;
+    text-align: left;
+    margin-top: 5px;
+}
+#controlsleft {
+    display: inline-block; 
+    width: 200; 
+    margin-left: 10px;
+    text-align: left;
+}
+#controlsright {
+    display: inline-block; 
+    width: 500; 
+    margin-right: 10px;
+    text-align: right;
+}
+#instructions #credits {
+    display: inline-block; 
+    width: 750px; 
+    margin-left: 20px;
+    text-align: left;
+    margin-bottom: 20px;
+    margin-top: 10px;
+}
+#datacontrols {
+    display: inline-block; 
+    width: 710; 
+    margin-left: 20px;
+    text-align: left;
+    background-color: white;
+}
+#outputblock {
+    width: 750px;
+    margin-left: 0px;
+    margin-top: 10px;
+    background-color: #87cefa;
+    border:1px solid #4e4e4e;
+}
+#help {
+    width: 710; 
+    text-align: left;
+}
+.highlight
+{
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 18px;
+    background: yellow;
+    z-index: -1;
+    display: none;
+}
+  /* 7-segment LED Binary Data
+
+    |--A--|
+    F     B
+    |--G--|
+    E     C
+    |--D--|
+           H - Decimal
+
+    HGFEDCBA
+  0b00000000
+  
+  */
+</style>
+    </head>
+    <body>
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.min.js"></script>
+    
+        <h1>7-Segment LED Display Animator - 5-Digit (Blue Segments)</h1>
+
+<div id="digitPane">
+    <svg xmlns="http://www.w3.org/2000/svg" width="140px" height="200px" viewBox="2 -2 10 22">
+        <g class="digit1">
+          <polygon id="a" class="off" points=" 1, 1  2, 0  8, 0  9, 1  8, 2  2, 2"/>
+          <polygon id="b" class="off" points=" 9, 1 10, 2 10, 8  9, 9  8, 8  8, 2"/>
+          <polygon id="c" class="off" points=" 9, 9 10,10 10,16  9,17  8,16  8,10"/>
+          <polygon id="d" class="off" points=" 9,17  8,18  2,18  1,17  2,16  8,16"/>
+          <polygon id="e" class="off" points=" 1,17  0,16  0,10  1, 9  2,10  2,16"/>
+          <polygon id="f" class="off" points=" 1, 9  0, 8  0, 2  1, 1  2, 2  2, 8"/>
+          <polygon id="g" class="off" points=" 1, 9  2, 8  8, 8  9, 9  8,10  2,10"/>
+          <polygon id="h" class="off" points=" 11,16  13,16  13,18  11,18"/>
+        </g>
+    </svg>
+    <svg xmlns="http://www.w3.org/2000/svg" width="140px" height="200px" viewBox="2 -2 10 22">
+        <g class="digit2">
+          <polygon id="a" class="off" points=" 1, 1  2, 0  8, 0  9, 1  8, 2  2, 2"/>
+          <polygon id="b" class="off" points=" 9, 1 10, 2 10, 8  9, 9  8, 8  8, 2"/>
+          <polygon id="c" class="off" points=" 9, 9 10,10 10,16  9,17  8,16  8,10"/>
+          <polygon id="d" class="off" points=" 9,17  8,18  2,18  1,17  2,16  8,16"/>
+          <polygon id="e" class="off" points=" 1,17  0,16  0,10  1, 9  2,10  2,16"/>
+          <polygon id="f" class="off" points=" 1, 9  0, 8  0, 2  1, 1  2, 2  2, 8"/>
+          <polygon id="g" class="off" points=" 1, 9  2, 8  8, 8  9, 9  8,10  2,10"/>
+          <polygon id="h" class="off" points=" 11,16  13,16  13,18  11,18"/>
+        </g>
+    </svg>
+    <svg xmlns="http://www.w3.org/2000/svg" width="140px" height="200px" viewBox="2 -2 10 22">
+        <g class="digit3">
+          <polygon id="a" class="off" points=" 1, 1  2, 0  8, 0  9, 1  8, 2  2, 2"/>
+          <polygon id="b" class="off" points=" 9, 1 10, 2 10, 8  9, 9  8, 8  8, 2"/>
+          <polygon id="c" class="off" points=" 9, 9 10,10 10,16  9,17  8,16  8,10"/>
+          <polygon id="d" class="off" points=" 9,17  8,18  2,18  1,17  2,16  8,16"/>
+          <polygon id="e" class="off" points=" 1,17  0,16  0,10  1, 9  2,10  2,16"/>
+          <polygon id="f" class="off" points=" 1, 9  0, 8  0, 2  1, 1  2, 2  2, 8"/>
+          <polygon id="g" class="off" points=" 1, 9  2, 8  8, 8  9, 9  8,10  2,10"/>
+          <polygon id="h" class="off" points=" 11,16  13,16  13,18  11,18"/>
+        </g>
+    </svg>
+    <svg xmlns="http://www.w3.org/2000/svg" width="140px" height="200px" viewBox="2 -2 10 22">
+        <g class="digit4">
+          <polygon id="a" class="off" points=" 1, 1  2, 0  8, 0  9, 1  8, 2  2, 2"/>
+          <polygon id="b" class="off" points=" 9, 1 10, 2 10, 8  9, 9  8, 8  8, 2"/>
+          <polygon id="c" class="off" points=" 9, 9 10,10 10,16  9,17  8,16  8,10"/>
+          <polygon id="d" class="off" points=" 9,17  8,18  2,18  1,17  2,16  8,16"/>
+          <polygon id="e" class="off" points=" 1,17  0,16  0,10  1, 9  2,10  2,16"/>
+          <polygon id="f" class="off" points=" 1, 9  0, 8  0, 2  1, 1  2, 2  2, 8"/>
+          <polygon id="g" class="off" points=" 1, 9  2, 8  8, 8  9, 9  8,10  2,10"/>
+          <polygon id="h" class="off" points=" 11,16  13,16  13,18  11,18"/>
+        </g>
+    </svg>
+    <svg xmlns="http://www.w3.org/2000/svg" width="140px" height="200px" viewBox="2 -2 10 22">
+        <g class="digit5">
+          <polygon id="a" class="off" points=" 1, 1  2, 0  8, 0  9, 1  8, 2  2, 2"/>
+          <polygon id="b" class="off" points=" 9, 1 10, 2 10, 8  9, 9  8, 8  8, 2"/>
+          <polygon id="c" class="off" points=" 9, 9 10,10 10,16  9,17  8,16  8,10"/>
+          <polygon id="d" class="off" points=" 9,17  8,18  2,18  1,17  2,16  8,16"/>
+          <polygon id="e" class="off" points=" 1,17  0,16  0,10  1, 9  2,10  2,16"/>
+          <polygon id="f" class="off" points=" 1, 9  0, 8  0, 2  1, 1  2, 2  2, 8"/>
+          <polygon id="g" class="off" points=" 1, 9  2, 8  8, 8  9, 9  8,10  2,10"/>
+          <polygon id="h" class="off" points=" 11,16  13,16  13,18  11,18"/>
+        </g>
+    </svg>
+</div>
+
+<div id="valuePane">
+    <div id="readings">
+        <div id="val1">Digit 1</div>
+        <div id="hex1">HEX</div>
+        <div id="bin1">BIN</div>
+    </div>
+    <div id="readings">
+        <div id="val2">Digit 2</div>
+        <div id="hex2">HEX</div>
+        <div id="bin2">BIN</div>
+    </div>
+    <div id="readings">
+        <div id="val3">Digit 3</div>
+        <div id="hex3">HEX</div>
+        <div id="bin3">BIN</div>
+    </div>
+    <div id="readings">
+        <div id="val4">Digit 4</div>
+        <div id="hex4">HEX</div>
+        <div id="bin4">BIN</div>
+    </div>
+    <div id="readings">
+        <div id="val5">Digit 5</div>
+        <div id="hex5">HEX</div>
+        <div id="bin5">BIN</div>
+    </div>
+    <div id="controls">
+        <button onclick="saveFrame()">Save Frame</button>
+        <button onclick="playAnimation()">Playback Animation</button>
+        <button onclick="clearDisplay()">Clear</button> | 
+        <button onclick="updateFrame()" id="frame">Frame = 0</button>
+        <button onclick="updateSpeed()" id="delay">Delay = 500</button>
+        <!-- <button onclick="toggleMap()" id="map">HGFEDCBA</button> -->
+        <!-- <button onclick="toggleFlip()" id="map">CA</button> -->
+        <select id="colorSelector" onchange="changeColor(this.value)">
+            <option value="blue" selected>Blue</option>
+            <option value="red">Red</option>
+        </select>
+    </div>
+</div>
+
+<div id="instructions">
+    <div id="help"><b>Instructions:</b> Click segments above to toggle LED state and 
+        click "Save" to record frame. Data for the
+        animation will be generated below.  Click the "Copy Code" button and paste
+        the data definition into your sketch.  See:
+        <a href="https://github.com/jasonacox/TM1637TinyDisplay" target="_blank" >TM1637TinyDisplay</a>
+        ( Animator: 
+        <a href="https://jasonacox.github.io/TM1637TinyDisplay/examples/7-segment-animator.html">4-Digit</a> | 
+        <a href="https://www.westaby.net/7seg/7-segment-animator.html">5-Digit</a> | 
+        <a href="https://jasonacox.github.io/TM1637TinyDisplay/examples/7-segment-animator6.html">6-Digit</a> )
+    </div> 
+</div>
+<div id="credits">
+    <div id="help"><b>Credits:</b> This tool was originally created by Jason A. Cox. For more information, visit the 
+        <a href="https://jasonacox.github.io/TM1637TinyDisplay/examples/7-segment-animator.html" target="_blank">original author's page</a>.
+    </div>
+</div>
+<br>
+<br>
+
+<div id="outputblock">
+    <div id="controls2">
+        <div id="controlsleft"><b>Animation Data</b></div> 
+        <div id="controlsright">
+        <button onclick="copyCode()">Copy Code</button>
+        <button onclick="if(confirmErase('This will clear current animation - Proceed?')) clearData()">Clear Data</button>
+        <button onclick="formatData()">Format Data</button>
+        <!-- Dropdown for selecting examples -->
+        <select id="exampleDropdown" onchange="if(confirmErase('This will replace current animation - Proceed?')) handleExampleSelection()">
+            <option value="example">Load an Example!</option>
+            <option value="example">Default Example</option>
+            <option value="side2side">Side to Side</option>
+            <option value="esb_2023_char_sequence">ESB 2023</option>
+            <option value="esb_char_sequence">ESB</option>
+            <option value="esb_inverted_char_sequence">ESB Inverted</option>
+            <option value="rotj_char_sequence">ROTJ</option>
+            <option value="rotj_inverted_char_sequence">ROTJ Inverted</option>
+            <option value="mando_char_sequence">Mando</option>
+            <option value="larson_char_sequence">Larson Animation</option>
+            <option value="updown_char_sequence">Up and Down</option>
+            <option value="snake_char_sequence">Snake Animation</option>
+            <option value="startup_char_sequence">Startup Sequence</option>
+            <option value="spiral_char_sequence">Spiral Animation</option>
+            <option value="spiral_inverted_char_sequence">Spiral Inverted Animation</option>
+        </select>
+        </div>
+    </div>
+    <pre id="codeOutput" contentEditable="true">
+{ 0x00, 0x00, 0x00, 0x00, 0x00 },  // Frame 0</pre>
+</div>
+
+<script>
+    // Globals //
+
+    var delayTime = 750;    // Time between animation frames in ms
+    var currentFrame = 0;   // TODO - Allow editing of frames
+    var HGFEDCBA = true;    // Binary Map - True=HGFEDCBA and False=ABCDEFGH
+    var enableFlip = true;
+
+    // Functions //
+
+    // Popup to ask user msg to confirm 
+    function confirmErase(msg) {
+        console.log("size: " + $('#codeOutput').text().length);
+        if($('#codeOutput').text().length > 39) {
+            return(window.confirm(msg));
+        }
+        else return(true);
+    }
+    
+    // Flip binary order to change mapping
+    function flipByte(digitbin) { 
+        var ret = 0b00000000;
+        console.log("digitbin: ".concat(digitbin," ret: ", ret));
+        if((digitbin & 0b00000001)>0) ret += 0b10000000;
+        if((digitbin & 0b00000010)>0) ret += 0b01000000;
+        if((digitbin & 0b00000100)>0) ret += 0b00100000;
+        if((digitbin & 0b00001000)>0) ret += 0b00010000;
+        if((digitbin & 0b00010000)>0) ret += 0b00001000;
+        if((digitbin & 0b00100000)>0) ret += 0b00000100;
+        if((digitbin & 0b01000000)>0) ret += 0b00000010;
+        //if((digitbin & 0b10000000)>0) ret += 0b00000001;
+        return(ret);
+    }
+
+    // Flip bits of a byte
+    function flipBits(byte) {
+        if(enableFlip)
+        {
+            return byte ^ 0xFF;
+        }
+        else
+        {
+            return byte
+        }
+    }
+
+    // Toggle binary order for segment map
+    function toggleFlip() {
+        if(enableFlip) {
+            enableFlip = true;
+            $('#map').text("CA");
+        }
+        else {
+            enableFlip = false;
+            $('#map').text("CC");
+        }
+        formatData(true);
+        updateValues();
+    }
+
+    // Toggle binary order for segment map
+    function toggleMap() {
+        if(HGFEDCBA) {
+            HGFEDCBA = false;
+            $('#map').text("ABCDEFGH");
+        }
+        else {
+            HGFEDCBA = true;
+            $('#map').text("HGFEDCBA");
+        }
+        formatData(true);
+        updateValues();
+    }
+
+    // Refresh button frame number indicator to last frame
+    function updateFrame() {
+        formatData();
+        var last = lastFrame();
+        showFrame(last);
+    }
+
+    // Toggle through speed options
+    function updateSpeed() {
+        switch(delayTime) { //Each button press proceeds to the next element
+            case 200:
+                delayTime = 100;
+                break;
+            case 100:
+                delayTime = 50;
+                break;
+            case 50:
+                delayTime = 25;
+                break;
+            case 25:
+                delayTime = 750;
+                break;
+            case 750:
+                delayTime = 500;
+                break;
+            default:
+                delayTime = 200;
+                break;
+        }
+        $('#delay').text("Delay = ".concat(delayTime.toString()));
+    }
+
+    // Copy animation data to users clipboard
+    function textToClipboard (text) {
+        var dummy = document.createElement("textarea");
+        dummy.setAttribute('readonly', '');
+        dummy.style.position = 'absolute';
+        dummy.style.left = '-9999px';
+        document.body.appendChild(dummy);
+        dummy.value = text;
+        dummy.select();
+        document.execCommand("copy");
+        document.body.removeChild(dummy);
+    }
+
+    // Generate code from animation data and update code output div
+    function copyCode() {
+        formatData();
+        var frame = 0;
+        var frameNum = lastFrame() + 1;
+        var buffer = "/* Animation Data - ";
+        if(HGFEDCBA) buffer = buffer + "HGFEDCBA Map */\n";
+        else buffer = buffer + "ABCDEFGH Map */\n";
+        buffer = buffer.concat("const uint8_t ANIMATION[",frameNum,"][5] = {");
+        var lines = $('#codeOutput').text().split("\n");
+        while(frame < lines.length) {
+            var line = lines[frame];
+            if(frame == (lines.length-1)) {
+                buffer = buffer.concat("\n  ",line.replace("},","} "));
+            }
+            else if(line.length > 19) {
+                buffer = buffer.concat("\n  ",line);
+            }
+            frame++;
+        }
+        buffer = buffer.concat("\n};");
+        console.log(buffer);
+        textToClipboard(buffer);
+        $('#codeOutput').text((buffer.concat(" ")).trim());
+        $("#outputblock").css("background-color","green");
+    }
+
+    // Erase all animation data 
+    function clearData() {
+        $('#codeOutput').text('');
+        $('#frame').text("Frame = 0");
+        $("#outputblock").css("background-color","#87cefa");
+        saveToLocalStorage();
+    }
+
+    var animationData = {
+        "example": "  { 0x08, 0x00, 0x00, 0x00, 0x00 },  // Frame 0\n" +
+                   "  { 0x00, 0x08, 0x00, 0x00, 0x00 },  // Frame 1\n" +
+                   "  { 0x00, 0x00, 0x08, 0x00, 0x00 },  // Frame 2\n" +
+                   "  { 0x00, 0x00, 0x00, 0x08, 0x00 },  // Frame 3\n" +
+                   "  { 0x00, 0x00, 0x00, 0x00, 0x08 },  // Frame 4\n" +
+                   "  { 0x00, 0x00, 0x00, 0x00, 0x04 },  // Frame 5\n" +
+                   "  { 0x00, 0x00, 0x00, 0x00, 0x02 },  // Frame 6\n" +
+                   "  { 0x00, 0x00, 0x00, 0x00, 0x01 },  // Frame 7\n" +
+                   "  { 0x00, 0x00, 0x00, 0x01, 0x00 },  // Frame 8\n" +
+                   "  { 0x00, 0x00, 0x01, 0x00, 0x00 },  // Frame 9\n" +
+                   "  { 0x00, 0x01, 0x00, 0x00, 0x00 },  // Frame 10\n" +
+                   "  { 0x01, 0x00, 0x00, 0x00, 0x00 },  // Frame 11",
+                   
+        "side2side": "  { 0x80, 0x80, 0x80, 0x80, 0x80 },  // Frame 0\n" +
+                     "  { 0xb0, 0xb0, 0xb0, 0xb0, 0xb0 },  // Frame 1\n" +
+                     "  { 0xc9, 0xc9, 0xc9, 0xc9, 0xc9 },  // Frame 2\n" +
+                     "  { 0x86, 0x86, 0x86, 0x86, 0x86 },  // Frame 3\n" +
+                     "  { 0x80, 0x80, 0x80, 0x80, 0x80 },  // Frame 4\n" +
+                     "  { 0xb0, 0xb0, 0xb0, 0xb0, 0xb0 },  // Frame 5\n" +
+                     "  { 0xc9, 0xc9, 0xc9, 0xc9, 0xc9 },  // Frame 6\n" +
+                     "  { 0x86, 0x86, 0x86, 0x86, 0x86 }   // Frame 7",
+
+        "esb_2023_char_sequence": "  { 0x90, 0x90, 0xc0, 0x86, 0xa2 },  // Frame 0\n" +
+                                  "  { 0xbd, 0xdb, 0xf6, 0xcf, 0xbe },  // Frame 1\n" +
+                                  "  { 0xa5, 0xc9, 0x96, 0x8d, 0x96 },  // Frame 2\n" +
+                                  "  { 0xc1, 0xe0, 0x85, 0x98, 0xc8 },  // Frame 3\n" +
+                                  "  { 0x8a, 0x86, 0xa8, 0xe0, 0x81 },  // Frame 4\n" +
+                                  "  { 0x89, 0xc2, 0xa4, 0xc8, 0x8c },  // Frame 5\n" +
+                                  "  { 0xc4, 0xa8, 0x91, 0x91, 0xc0 },  // Frame 6\n" +
+                                  "  { 0xb9, 0xd3, 0xe6, 0xce, 0xbe },  // Frame 7\n" +
+                                  "  { 0x80, 0x80, 0x80, 0x80, 0x80 },  // Frame 8\n" +
+                                  "  { 0xa1, 0xc1, 0x86, 0x8c, 0x98 }   // Frame 9",
+
+        "esb_char_sequence": "  { 0xa1, 0xc1, 0x86, 0x8c, 0xfd },  // Frame 0\n" +
+                             "  { 0x80, 0x80, 0x80, 0x80, 0x80 },  // Frame 1\n" +
+                             "  { 0xa1, 0xc1, 0x86, 0x8c, 0xfd },  // Frame 2\n" +
+                             "  { 0x8b, 0x86, 0x88, 0xa1, 0x89 },  // Frame 3\n" +
+                             "  { 0xbd, 0xdb, 0xf6, 0xcf, 0xbe },  // Frame 4\n" +
+                             "  { 0xa1, 0xc1, 0x86, 0x8c, 0xfd },  // Frame 5\n" +
+                             "  { 0x89, 0x92, 0xa4, 0x98, 0xf9 },  // Frame 6\n" +
+                             "  { 0xbd, 0xdb, 0xf6, 0xcf, 0xbe },  // Frame 7\n" +
+                             "  { 0xa1, 0xc1, 0x86, 0x8c, 0xfd },  // Frame 8\n" +
+                             "  { 0x89, 0xc2, 0xa4, 0x80, 0xce },  // Frame 9\n" +
+                             "  { 0xff, 0xff, 0xff, 0xff, 0xff }   // Frame 10",
+
+        "esb_inverted_char_sequence": "  { 0x5e, 0x5e, 0x3e, 0x79, 0x02 },  // Frame 0\n" +
+                                      "  { 0x7f, 0x7f, 0x7f, 0x7f, 0x7f },  // Frame 1\n" +
+                                      "  { 0x5e, 0x5e, 0x3e, 0x79, 0x02 },  // Frame 2\n" +
+                                      "  { 0x74, 0x74, 0x79, 0x77, 0x76 },  // Frame 3\n" +
+                                      "  { 0x42, 0x42, 0x24, 0x09, 0x21 },  // Frame 4\n" +
+                                      "  { 0x5e, 0x5e, 0x3e, 0x79, 0x02 },  // Frame 5\n" +
+                                      "  { 0x76, 0x76, 0x6d, 0x5b, 0x06 },  // Frame 6\n" +
+                                      "  { 0x42, 0x42, 0x24, 0x09, 0x21 },  // Frame 7\n" +
+                                      "  { 0x5e, 0x5e, 0x3e, 0x79, 0x02 },  // Frame 8\n" +
+                                      "  { 0x76, 0x76, 0x3d, 0x5b, 0x31 },  // Frame 9\n" +
+                                      "  { 0x00, 0x00, 0x00, 0x00, 0x00 }   // Frame 10",
+
+        "rotj_char_sequence": "  { 0x80, 0x80, 0x80, 0x80, 0x80 },  // Frame 0\n" +
+                              "  { 0xbd, 0xdb, 0xf6, 0xcf, 0xbe },  // Frame 1\n" +
+                              "  { 0xa1, 0xc1, 0x86, 0x8c, 0xfd },  // Frame 2\n" +
+                              "  { 0x89, 0xc2, 0xa4, 0x80, 0xce },  // Frame 3\n" +
+                              "  { 0x89, 0x92, 0xa4, 0x98, 0xf9 },  // Frame 4\n" +
+                              "  { 0xbd, 0xdb, 0xf6, 0xcf, 0xbe },  // Frame 5\n" +
+                              "  { 0x8b, 0x86, 0x88, 0xa1, 0x89 },  // Frame 6\n" +
+                              "  { 0x89, 0xc2, 0xa4, 0x80, 0xce }   // Frame 7",
+
+        "rotj_inverted_char_sequence": "  { 0x7f, 0x7f, 0x7f, 0x7f, 0x7f },  // Frame 0\n" +
+                                       "  { 0x42, 0x42, 0x24, 0x09, 0x21 },  // Frame 1\n" +
+                                       "  { 0x5e, 0x5e, 0x3e, 0x79, 0x02 },  // Frame 2\n" +
+                                       "  { 0x76, 0x76, 0x3d, 0x5b, 0x31 },  // Frame 3\n" +
+                                       "  { 0x76, 0x76, 0x6d, 0x5b, 0x06 },  // Frame 4\n" +
+                                       "  { 0x42, 0x42, 0x24, 0x09, 0x21 },  // Frame 5\n" +
+                                       "  { 0x74, 0x74, 0x79, 0x77, 0x76 },  // Frame 6\n" +
+                                       "  { 0x76, 0x76, 0x3d, 0x5b, 0x31 }   // Frame 7",
+
+        "mando_char_sequence": "  { 0x89, 0xc2, 0xa4, 0x80, 0xce },  // Frame 0\n" +
+                               "  { 0x80, 0x80, 0x80, 0x80, 0x80 },  // Frame 1\n" +
+                               "  { 0xbd, 0xdb, 0xf6, 0xcf, 0xbe },  // Frame 2\n" +
+                               "  { 0xa1, 0xc1, 0x86, 0x8c, 0xfd },  // Frame 3\n" +
+                               "  { 0x89, 0x93, 0xa4, 0x98, 0xcf },  // Frame 4\n" +
+                               "  { 0x8a, 0x86, 0xa8, 0xe0, 0x8f },  // Frame 5\n" +
+                               "  { 0x86, 0x86, 0xac, 0xf0, 0x9f },  // Frame 6\n" +
+                               "  { 0xb9, 0xd7, 0xfe, 0xcf, 0xbe },  // Frame 7\n" +
+                               "  { 0x9a, 0x86, 0xbd, 0xe0, 0x9f },  // Frame 8\n" +
+                               "  { 0xff, 0xff, 0xff, 0xff, 0xff }   // Frame 9",
+
+        "larson_char_sequence": "  { 0xc9, 0xff, 0xff, 0xff, 0xff },  // Frame 0\n" +
+                                "  { 0xff, 0xc9, 0xff, 0xff, 0xff },  // Frame 1\n" +
+                                "  { 0xff, 0xff, 0xc9, 0xff, 0xff },  // Frame 2\n" +
+                                "  { 0xff, 0xff, 0xff, 0xc9, 0xff },  // Frame 3\n" +
+                                "  { 0xff, 0xff, 0xff, 0xff, 0xc9 },  // Frame 4\n" +
+                                "  { 0xff, 0xff, 0xff, 0xc9, 0xff },  // Frame 5\n" +
+                                "  { 0xff, 0xff, 0xc9, 0xff, 0xff },  // Frame 6\n" +
+                                "  { 0xff, 0xc9, 0xff, 0xff, 0xff }   // Frame 7",
+
+        "updown_char_sequence": "  { 0xff, 0xff, 0xff, 0xff, 0xff },  // Frame 0\n" +
+                                "  { 0xfe, 0xfe, 0xfe, 0xfe, 0xfe },  // Frame 1\n" +
+                                "  { 0xdd, 0xdd, 0xdd, 0xdd, 0xdd },  // Frame 2\n" +
+                                "  { 0xbf, 0xbf, 0xbf, 0xbf, 0xbf },  // Frame 3\n" +
+                                "  { 0xeb, 0xeb, 0xeb, 0xeb, 0xeb },  // Frame 4\n" +
+                                "  { 0xf7, 0xf7, 0xf7, 0xf7, 0xf7 },  // Frame 5\n" +
+                                "  { 0xff, 0xff, 0xff, 0xff, 0xff },  // Frame 6\n" +
+                                "  { 0xf7, 0xf7, 0xf7, 0xf7, 0xf7 },  // Frame 7\n" +
+                                "  { 0xeb, 0xeb, 0xeb, 0xeb, 0xeb },  // Frame 8\n" +
+                                "  { 0xbf, 0xbf, 0xbf, 0xbf, 0xbf },  // Frame 9\n" +
+                                "  { 0xdd, 0xdd, 0xdd, 0xdd, 0xdd },  // Frame 10\n" +
+                                "  { 0xfe, 0xfe, 0xfe, 0xfe, 0xfe }   // Frame 11",
+
+        "snake_char_sequence": "  { 0xff, 0xff, 0xff, 0xff, 0xef },  // Frame 0\n" +
+                               "  { 0xfe, 0xff, 0xff, 0xff, 0xef },  // Frame 1\n" +
+                               "  { 0xfe, 0xfe, 0xff, 0xff, 0xef },  // Frame 2\n" +
+                               "  { 0xfe, 0xfe, 0xfe, 0xff, 0xef },  // Frame 3\n" +
+                               "  { 0xff, 0xfe, 0xfc, 0xff, 0xef },  // Frame 4\n" +
+                               "  { 0xff, 0xff, 0xf8, 0xff, 0xef },  // Frame 5\n" +
+                               "  { 0xff, 0xff, 0xf9, 0xf7, 0xef },  // Frame 6\n" +
+                               "  { 0xff, 0xdf, 0xf9, 0xf7, 0xef },  // Frame 7\n" +
+                               "  { 0xff, 0xdf, 0xfb, 0xf7, 0xcf },  // Frame 8\n" +
+                               "  { 0xff, 0xdf, 0xff, 0xf6, 0xcf },  // Frame 9\n" +
+                               "  { 0xff, 0xdf, 0xfe, 0xfe, 0xcf },  // Frame 10\n" +
+                               "  { 0xff, 0xde, 0xfe, 0xfe, 0xdf },  // Frame 11\n" +
+                               "  { 0xff, 0xde, 0xf6, 0xfe, 0xdf },  // Frame 12\n" +
+                               "  { 0xff, 0xce, 0xf6, 0xfe, 0xff },  // Frame 13\n" +
+                               "  { 0xff, 0xc6, 0xf6, 0xff, 0xff },  // Frame 14\n" +
+                               "  { 0xff, 0xc6, 0xf6, 0xff, 0xbf },  // Frame 15\n" +
+                               "  { 0xff, 0xc6, 0xf7, 0xef, 0xbf },  // Frame 16\n" +
+                               "  { 0xff, 0xc7, 0xf7, 0xaf, 0xbf },  // Frame 17\n" +
+                               "  { 0xff, 0xc7, 0xf6, 0xaf, 0xff },  // Frame 18\n" +
+                               "  { 0xff, 0xe7, 0xf6, 0xad, 0xff },  // Frame 19\n" +
+                               "  { 0xff, 0xf7, 0xf6, 0xac, 0xff },  // Frame 20\n" +
+                               "  { 0xef, 0xf7, 0xf6, 0xac, 0xff },  // Frame 21\n" +
+                               "  { 0xef, 0xfe, 0xf6, 0xac, 0xff },  // Frame 22\n" +
+                               "  { 0xee, 0xfe, 0xfe, 0xac, 0xff },  // Frame 23\n" +
+                               "  { 0xce, 0xfe, 0xfe, 0xbc, 0xff },  // Frame 24\n" +
+                               "  { 0xce, 0xde, 0xfe, 0xbc, 0xff },  // Frame 25\n" +
+                               "  { 0xc6, 0xde, 0xfe, 0xfc, 0xff },  // Frame 26\n" +
+                               "  { 0xc6, 0xce, 0xfe, 0xfc, 0xff },  // Frame 27\n" +
+                               "  { 0xc6, 0xce, 0xfe, 0xf6, 0xff },  // Frame 28\n" +
+                               "  { 0x80, 0x80, 0x80, 0x80, 0x80 },  // Frame 29\n" +
+                               "  { 0xff, 0xff, 0xff, 0xff, 0xff },  // Frame 30\n" +
+                               "  { 0x80, 0x80, 0x80, 0x80, 0x80 },  // Frame 31\n" +
+                               "  { 0xff, 0xff, 0xff, 0xff, 0xff },  // Frame 32\n" +
+                               "  { 0x80, 0x80, 0x80, 0x80, 0x80 },  // Frame 33\n" +
+                               "  { 0xff, 0xff, 0xff, 0xff, 0xff }   // Frame 34",
+
+        "startup_char_sequence": "  { 0xc7, 0xc0, 0x88, 0xa1, 0xf9 },  // Frame 0\n" +
+                                 "  { 0xc0, 0x88, 0xa1, 0xf9, 0xc8 },  // Frame 1\n" +
+                                 "  { 0x88, 0xa1, 0xf9, 0xc8, 0x90 },  // Frame 2\n" +
+                                 "  { 0xa1, 0xf9, 0xc8, 0x90, 0xff },  // Frame 3\n" +
+                                 "  { 0xf9, 0xc8, 0x90, 0xff, 0xff },  // Frame 4\n" +
+                                 "  { 0xc8, 0x90, 0xff, 0xff, 0xff },  // Frame 5\n" +
+                                 "  { 0x90, 0xff, 0xff, 0xff, 0xc7 },  // Frame 6\n" +
+                                 "  { 0xff, 0xff, 0xff, 0xc7, 0xc0 },  // Frame 7\n" +
+                                 "  { 0xff, 0xff, 0xc7, 0xc0, 0x88 },  // Frame 8\n" +
+                                 "  { 0xff, 0xc7, 0xc0, 0x88, 0xa1 }   // Frame 9",
+
+        "spiral_char_sequence": "  { 0x90, 0x90, 0x90, 0x90, 0x90 },  // Frame 0\n" +
+                                "  { 0xb0, 0xb0, 0xb0, 0xb0, 0xb0 },  // Frame 1\n" +
+                                "  { 0xa1, 0xa1, 0xa1, 0xa1, 0xa1 },  // Frame 2\n" +
+                                "  { 0x83, 0x83, 0x83, 0x83, 0x83 },  // Frame 3\n" +
+                                "  { 0x86, 0x86, 0x86, 0x86, 0x86 },  // Frame 4\n" +
+                                "  { 0x8c, 0x8c, 0x8c, 0x8c, 0x8c },  // Frame 5\n" +
+                                "  { 0x98, 0x98, 0x98, 0x98, 0x98 },  // Frame 6\n" +
+                                "  { 0x90, 0x90, 0x90, 0x90, 0x90 },  // Frame 7\n" +
+                                "  { 0xc0, 0xc0, 0xc0, 0xc0, 0xc0 },  // Frame 8\n" +
+                                "  { 0x80, 0x80, 0x80, 0x80, 0x80 }   // Frame 9",
+
+        "spiral_inverted_char_sequence": "  { 0xef, 0xef, 0xef, 0xef, 0xef },  // Frame 0\n" +
+                                         "  { 0xcf, 0xcf, 0xcf, 0xcf, 0xcf },  // Frame 1\n" +
+                                         "  { 0x5e, 0x5e, 0x5e, 0x5e, 0x5e },  // Frame 2\n" +
+                                         "  { 0x7c, 0x7c, 0x7c, 0x7c, 0x7c },  // Frame 3\n" +
+                                         "  { 0x79, 0x79, 0x79, 0x79, 0x79 },  // Frame 4\n" +
+                                         "  { 0x73, 0x73, 0x73, 0x73, 0x73 },  // Frame 5\n" +
+                                         "  { 0x67, 0x67, 0x67, 0x67, 0x67 },  // Frame 6\n" +
+                                         "  { 0x6f, 0x6f, 0x6f, 0x6f, 0x6f },  // Frame 7\n" +
+                                         "  { 0x3f, 0x3f, 0x3f, 0x3f, 0x3f },  // Frame 8\n" +
+                                         "  { 0x7f, 0x7f, 0x7f, 0x7f, 0x7f }   // Frame 9",
+    };
+    
+    function handleExampleData(exampleKey) {
+        var data = animationData[exampleKey];
+
+        if (data) {
+            $('#codeOutput').text(data);
+            $("#outputblock").css("background-color", "#87cefa");
+            formatData(!HGFEDCBA);  // Process and display the formatted data
+            saveToLocalStorage();
+        } else {
+            console.log("No data found for key: " + exampleKey);
+        }
+    }
+
+    // Dropdown example selections
+    function handleExampleSelection() {
+        var selectedValue = document.getElementById('exampleDropdown').value;
+        console.log("Got selection: " + selectedValue);
+        handleExampleData(selectedValue);
+    }
+
+    // Return the value of digit dig
+    function grabValue(dig) { 
+        var digitbin = 0;
+        if($(dig.concat(" #a")).attr("class") == "on") digitbin += 0b00000001;
+        if($(dig.concat(" #b")).attr("class") == "on") digitbin += 0b00000010;
+        if($(dig.concat(" #c")).attr("class") == "on") digitbin += 0b00000100;
+        if($(dig.concat(" #d")).attr("class") == "on") digitbin += 0b00001000;
+        if($(dig.concat(" #e")).attr("class") == "on") digitbin += 0b00010000;
+        if($(dig.concat(" #f")).attr("class") == "on") digitbin += 0b00100000;
+        if($(dig.concat(" #g")).attr("class") == "on") digitbin += 0b01000000;
+        //if($(dig.concat(" #h")).attr("class") == "on") digitbin += 0b10000000;
+        if(!HGFEDCBA) return(flipByte(digitbin));
+        else return(digitbin);
+    }
+
+    // Clear all digits 
+    function clearDisplay(){
+        resetZero(".digit1");
+        resetZero(".digit2");
+        resetZero(".digit3");
+        resetZero(".digit4");
+        resetZero(".digit5");
+        var frameNum = lastFrame() + 1;   
+        $('#frame').text("Frame = ".concat(frameNum.toString()));
+        $("#outputblock").css("background-color","#87cefa");
+    }
+
+    // Clear a single digit dig
+    function resetZero(dig) {
+        $(dig.concat(" #a")).attr("class","off");
+        $(dig.concat(" #b")).attr("class","off");
+        $(dig.concat(" #c")).attr("class","off");
+        $(dig.concat(" #d")).attr("class","off");
+        $(dig.concat(" #e")).attr("class","off");
+        $(dig.concat(" #f")).attr("class","off");
+        $(dig.concat(" #g")).attr("class","off");
+        $(dig.concat(" #h")).attr("class","off");
+    }
+
+    // Set digit dig segment LEDs based on d
+    function setDigit(dig, d) { 
+        resetZero(dig);
+        var digitbin = d;
+        if(!HGFEDCBA) digitbin = flipByte(d);
+        if((digitbin & 0b00000001) > 0) $(dig.concat(" #a")).attr("class","on");
+        if((digitbin & 0b00000010) > 0) $(dig.concat(" #b")).attr("class","on");
+        if((digitbin & 0b00000100) > 0) $(dig.concat(" #c")).attr("class","on");
+        if((digitbin & 0b00001000) > 0) $(dig.concat(" #d")).attr("class","on");
+        if((digitbin & 0b00010000) > 0) $(dig.concat(" #e")).attr("class","on");
+        if((digitbin & 0b00100000) > 0) $(dig.concat(" #f")).attr("class","on");
+        if((digitbin & 0b01000000) > 0) $(dig.concat(" #g")).attr("class","on");
+        //if((digitbin & 0b10000000) > 0) $(dig.concat(" #h")).attr("class","on");
+        updateValues();
+    }
+
+    // Compute digit values and display values below digits
+    function updateValues() {
+        digit1bin = grabValue(".digit1");
+        $('#hex1').html('0x'.concat(flipBits(digit1bin).toString(16).padStart(2, '0')));    
+        $('#bin1').html('0b'.concat(flipBits(digit1bin).toString(2).padStart(8, '0')));  
+        digit2bin = grabValue(".digit2");
+        $('#hex2').html('0x'.concat(flipBits(digit2bin).toString(16).padStart(2, '0')));    
+        $('#bin2').html('0b'.concat(flipBits(digit2bin).toString(2).padStart(8, '0')));  
+        digit3bin = grabValue(".digit3");
+        $('#hex3').html('0x'.concat(flipBits(digit3bin).toString(16).padStart(2, '0')));    
+        $('#bin3').html('0b'.concat(flipBits(digit3bin).toString(2).padStart(8, '0')));  
+        digit4bin = grabValue(".digit4");
+        $('#hex4').html('0x'.concat(flipBits(digit4bin).toString(16).padStart(2, '0')));    
+        $('#bin4').html('0b'.concat(flipBits(digit4bin).toString(2).padStart(8, '0')));
+        digit5bin = grabValue(".digit5");
+        $('#hex5').html('0x'.concat(flipBits(digit5bin).toString(16).padStart(2, '0')));    
+        $('#bin5').html('0b'.concat(flipBits(digit5bin).toString(2).padStart(8, '0')));          
+    }
+
+    // Capture digit values as a new frame and add to animation data
+    function saveFrame() {
+        formatData();
+        var frameNum = lastFrame() + 1;
+        var d1 = grabValue(".digit1");
+        var d2 = grabValue(".digit2");
+        var d3 = grabValue(".digit3");
+        var d4 = grabValue(".digit4");
+        var d5 = grabValue(".digit5");
+        var output = $('#codeOutput').text();
+        if(output.length > 19) output = output + "\n";
+        else frameNum = 0;
+        $('#codeOutput').text(''.concat(output,"{ 0x",flipBits(d1).toString(16).padStart(2, '0'),", 0x",flipBits(d2).toString(16).padStart(2, '0'),", 0x",flipBits(d3).toString(16).padStart(2, '0'),", 0x",flipBits(d4).toString(16).padStart(2, '0'),", 0x",flipBits(d5).toString(16).padStart(2, '0')," },  // Frame ",frameNum.toString()));
+        $('#frame').text("Frame = ".concat(frameNum.toString()));
+        saveToLocalStorage();
+    }
+
+    // Return the number of frames
+    function lastFrame() {
+        var lines = $('#codeOutput').text().split("\n");
+        return(lines.length - 1);
+    }
+
+    // Playback the animation data on digits
+    function playAnimation() {
+        formatData();
+        var frame = 0;
+        var lines = $('#codeOutput').text().split("\n");
+        var step = 1;
+        var tick = setInterval(function() {
+            if(frame == (lines.length-1)) { clearInterval(tick) };
+            var line = lines[frame];
+            if(line.length > 19) {
+                $('#frame').text("Frame = ".concat(frame.toString()));
+                var fields = line.replace("{","").replace("}","").split(",");
+                if(fields.length >= 5) {
+                    var d1 = flipBits(parseInt(fields[0].trim(), 16));
+                    var d2 = flipBits(parseInt(fields[1].trim(), 16));
+                    var d3 = flipBits(parseInt(fields[2].trim(), 16));
+                    var d4 = flipBits(parseInt(fields[3].trim(), 16));
+                    var d5 = flipBits(parseInt(fields[4].trim(), 16));
+                    console.log("Frame: ".concat(frame," - Valid Data: ",d1," ",d2," ", d3," ", d4, " ", d5));
+                    setDigit(".digit1", d1);
+                    setDigit(".digit2", d2);
+                    setDigit(".digit3", d3);
+                    setDigit(".digit4", d4);
+                    setDigit(".digit5", d5);
+                }
+                else console.log("Frame: ".concat(frame," - Invalid Data"));
+            }
+            else {
+                console.log("Frame: ".concat(frame," - Invalid Data"));
+            }
+
+            frame++;
+        }, delayTime);
+    }
+
+    // Clean up the animation data
+    function formatData(flip = false) {
+        var frame = 0;
+        var lines = $('#codeOutput').text().split("\n");
+        var step = 1;
+        var buffer = [];
+        var dirty = false;
+        while(frame < lines.length) {
+            var line = lines[frame];
+            if(line.length > 19) {
+                var fields = line.replace("{","").replace("}","").split(",");
+                if(fields.length >= 5) {
+                    var d1 = parseInt(fields[0].trim(), 16);
+                    var d2 = parseInt(fields[1].trim(), 16);
+                    var d3 = parseInt(fields[2].trim(), 16);
+                    var d4 = parseInt(fields[3].trim(), 16);
+                    var d5 = parseInt(fields[4].trim(), 16);
+                    if(isNaN(d1)) d1=0;
+                    if(isNaN(d2)) d2=0;
+                    if(isNaN(d3)) d3=0;
+                    if(isNaN(d4)) d4=0;
+                    if(isNaN(d5)) d5=0;
+                    if(flip) {
+                        d1 = flipBits(d1);
+                        d2 = flipBits(d2);
+                        d3 = flipBits(d3);
+                        d4 = flipBits(d4);
+                        d5 = flipBits(d5);
+                    }
+                    var nd1 = '0x'.concat(d1.toString(16).padStart(2, '0'));
+                    var nd2 = '0x'.concat(d2.toString(16).padStart(2, '0'));
+                    var nd3 = '0x'.concat(d3.toString(16).padStart(2, '0'));
+                    var nd4 = '0x'.concat(d4.toString(16).padStart(2, '0'));
+                    var nd5 = '0x'.concat(d5.toString(16).padStart(2, '0'));
+                    buffer = "".concat(buffer,"{ ",nd1,", ",nd2,", ",nd3,", ",nd4,", ",nd5," },  // Frame ",frame.toString());
+                    if(frame < (lines.length-1)) buffer = buffer + "\n";
+                }
+                else {
+                    console.log("Format Frame: ".concat(frame," - Invalid Field Number"));
+                    dirty = true;
+                }
+            }
+            else {
+                console.log("Format Frame: ".concat(frame," - Data Missing"));
+            }
+            frame++;
+        }
+        $('#codeOutput').text((" ".concat(buffer)).trim());
+        $('#frame').text("Frame = ".concat(lastFrame().toString()));
+        $("#outputblock").css("background-color","#87cefa");
+        if(dirty) formatData(); 
+    }
+
+    // Save animation data to local storage
+    function saveToLocalStorage() {
+        var animationData = $('#codeOutput').text();
+        localStorage.setItem('animationData', animationData);
+    }
+
+    // Load animation data from local storage
+    function loadFromLocalStorage() {
+        var animationData = localStorage.getItem('animationData');
+        if (animationData) {
+            $('#codeOutput').text(animationData);
+            $("#outputblock").css("background-color","#87cefa");
+            formatData();
+        }
+    }
+
+    // Load a single frame into digits
+    function showFrame(frame) {
+        var lines = $('#codeOutput').text().split("\n");
+        if((lines.length-1)<frame) return;
+        var line = lines[frame];
+        if(line.length > 19) {
+            $('#frame').text("Frame = ".concat(frame.toString()));
+            var fields = line.replace("{","").replace("}","").split(",");
+            if(fields.length >= 5) {
+                var d1 = flipBits(parseInt(fields[0].trim(), 16));
+                var d2 = flipBits(parseInt(fields[1].trim(), 16));
+                var d3 = flipBits(parseInt(fields[2].trim(), 16));
+                var d4 = flipBits(parseInt(fields[3].trim(), 16));
+                var d5 = flipBits(parseInt(fields[4].trim(), 16));
+                setDigit(".digit1", d1);
+                setDigit(".digit2", d2);
+                setDigit(".digit3", d3);
+                setDigit(".digit4", d4);
+                setDigit(".digit5", d5);
+            }
+            else console.log("Frame: ".concat(frame," - Invalid Data"));
+        }
+        else {
+            console.log("Frame: ".concat(frame," - Invalid Data"));
+        }
+    }
+
+    // Detect user interactions
+    $(document).ready(function() {
+        // Intercept LED mouse clicks and toggle LED
+        $(".digit1 polygon:not(#h)").click(function() {     
+            var sSegClass = $(this).attr("class") === "off" ? "on" : "off";            
+            $(this).attr("class", sSegClass);
+            updateValues();        
+        });
+        $(".digit2 polygon:not(#h)").click(function() {     
+            var sSegClass = $(this).attr("class") === "off" ? "on" : "off";            
+            $(this).attr("class", sSegClass);
+            updateValues();  
+        });
+        $(".digit3 polygon:not(#h)").click(function() {      
+            var sSegClass = $(this).attr("class") === "off" ? "on" : "off";            
+            $(this).attr("class", sSegClass);
+            updateValues();  
+        });
+        $(".digit4 polygon:not(#h)").click(function() {     
+            var sSegClass = $(this).attr("class") === "off" ? "on" : "off";            
+            $(this).attr("class", sSegClass);
+            updateValues();  
+        });
+        $(".digit5 polygon:not(#h)").click(function() {     
+            var sSegClass = $(this).attr("class") === "off" ? "on" : "off";            
+            $(this).attr("class", sSegClass);
+            updateValues();  
+        });
+        // Intercept mouse clicks in output section and load frame selected
+        $( "#codeOutput" ).mousedown(function( event ) {
+            var line = parseInt(event.offsetY/17);
+            console.log("Line: "+ line);
+            showFrame(line);
+        });
+        
+        // Load animation data from local storage on page load
+        loadFromLocalStorage();
+    });
+
+    updateValues();
+    
+    
+        
+    function changeColor(color) {
+        if (color === "red") {
+            document.documentElement.style.setProperty('--offColor', '#320000');
+            document.documentElement.style.setProperty('--onColor', 'red');
+        } else {
+            // Default to blue
+            document.documentElement.style.setProperty('--offColor', '#001432');
+            document.documentElement.style.setProperty('--onColor', '#0000ff');
+        }
+    }
+    </script>
+    </body>
+</html>
